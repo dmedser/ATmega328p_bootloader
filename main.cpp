@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Имя и пароль WiFi сети: AT+CWJAP_DEF="<SSID>","<passwrd>" */
+/* Имя и пароль от WiFi сети: AT+CWJAP_DEF="<SSID>","<passwrd>" */
 const char *wifi_connection_str = "AT+CWJAP_DEF=\"Columbia 3.0\",\"allisinvain\"\r\n";
  
 /* Establish UDP Transmission
@@ -52,9 +52,10 @@ void     (*jmp_to_app)(void) = APP_START_ADDRESS;
 #define TICKS_IN_SEC			(F_TIMER1)
 #define BOOT_TIMEOUT_SEC		10
 
+/* Счетчик секунд таймаута выхода из программы бутлоадера */
 uint8_t sec_cntr = 0;
 
-/* Буфер страницы для записи в application область flash памяти */
+/* Буфер страницы для записи в application область flash памяти программ */
 uint8_t  pg[SPM_PAGESIZE];
 uint8_t  pg_idx = 0;
 uint32_t pg_addr = 0;
@@ -72,12 +73,12 @@ typedef enum {
     BOOT_STATE_COMPLETE
 } boot_state_t;
 
-/* Hex файл прошивки состоит из ihex строк, см. https://ru.wikipedia.org/wiki/Intel_HEX */ 
+/* Hex файл состоит из ihex строк, см. https://ru.wikipedia.org/wiki/Intel_HEX */ 
 typedef struct {
   bool     is_correct;
   bool     len_is_known;
-  uint8_t  len;           // Указанное в ihex строке количество байт 
-  bool     is_full;       // Все символы ihex строки содержатся в текущем tftp пакете 
+  uint8_t  len;           // Длина, указанная в ihex строке 
+  bool     is_full;       // Все байты ihex строки находятся в текущем принятом tftp пакете 
   bool     is_last_in_pck;
   bool     is_eof;
   uint16_t addr;
@@ -85,7 +86,7 @@ typedef struct {
 } ihex_str_t;
 
 
-/* Сдвиговый буфер для хранения принятых от ESP8266 символов */
+/* Сдвиговый буфер для приема символов от ESP8266 */
 class shift_buf {
 public:
     char buf[SHIFT_BUF_LEN];
@@ -96,7 +97,6 @@ public:
 };
 
 
-/* Сдвиговый буфер */
 shift_buf      sb;
 
 boot_state_t   boot_state;
@@ -116,18 +116,19 @@ ihex_str_t     ihex_str = {/* is_correct */      false,
                            /* addr */            0,
                            /* crc */             0};
 
-/* Количество непроверенных байт в tftp пакете */
+
+/* Количество непроверенных байт в текущем принятом tftp пакете */
 uint16_t tftp_pck_unchecked = 0;
-/* Количество недостающих байт последней в tftp пакете ihex строки */
+/* Количество символов ihex строки, которые отсутсвуют в данном tftp пакете */
 uint8_t  tftp_ihex_remainder = 0;
 /* Резервная ihex строка для дозаполнения из текущего принятого tftp пакета, 
-   в случае если последняя ihex строка предудущего пакета была неполной */
+   если последняя ihex строка предыдущего пакета была неполной */
 uint8_t  tftp_ihex_reserve_buf[IHEX_MAX_C_LEN];
 
 
 
 void uart_init() {
-    /* 115200 бод, 16 МГц, см. http://wormfood.net/avrbaudcalc.php */
+    /* 115200 bps 16 MHz, см. http://wormfood.net/avrbaudcalc.php */
     uint16_t baud_rate = 0x0008;
     UBRR0H = (baud_rate & 0x0F00) >> 8;
     UBRR0L = (baud_rate  & 0x00FF);
@@ -251,7 +252,7 @@ void esp_init() {
     /* Установить режим Station */
     esp_wait_for_str("OK\r\n", "AT+CWMODE_CUR=1\r\n");
             
-    /* Отключиться от текущей точки доступа */
+    /* Отключиться от текущей точки доступа WiFi */
     esp_wait_for_str("OK\r\n", "AT+CWQAP\r\n");
             
     /* Подключиться к точке доступа WiFi */
@@ -271,10 +272,10 @@ void esp_init() {
     * <port>: port number; 333 by default */
     esp_wait_for_str("OK\r\n", "AT+CIPSERVER=1,69\r\n");
       
-    /* Установить UDP соединение с компьютером */   
+    /* Установить UDP соединение с ПК */   
     esp_wait_for_str("OK\r\n", udp_pc_connection_str);
     
-    /* Запросить IP данного ESP8266  */
+    /* Запросить IP для данного ESP8266  */
     esp_wait_for_str("OK\r\n", "AT+CIPSTA?\r\n");
 }
 
@@ -334,7 +335,7 @@ uint16_t get_tftp_data_pck_len() {
 
 void atmega_pwr_on() {
     DDRC &= ~(1 << PORTC2);         // PC2 на вход для чтения PWR_GET_DI
-    if(!(PORTC & (1 << PORTC2))) {  // Если 0 на PС2
+    if(!(PORTC & (1 << PORTC2))) {  // Если 0 на PC2
         DDRC  |= (1 << PORTC1);     // PC1 на выход для подачи на него 1
         PORTC |= (1 << PORTC1);
     }
@@ -517,8 +518,8 @@ void loop() {
 				tftp_pck_ptr = &tftp_pck[0];  
 			}
 			else {
-				/* Если последняя ihex строка в предыдущем пакете была неполной, 
-				   дополняем reserve до полной ihex строки */
+				/* Дозаполнить ihex строку в резервном буфере, 
+				 * если в предыдущем пакете она была принята не полностью */
 				uint8_t i = tftp_pck_unchecked;
 				/* Количество символов в ihex строке */
 				uint8_t ihex_str_c_len = 0;
@@ -541,28 +542,28 @@ void loop() {
         
 			while(1) {
 				get_ihex_str_status();
-				/* Если reserve был дополнен до полной ihex строки,
-				   перемещаем tftp_pck_ptr на следующую ihex строку */
+				/* Если ihex строка была дозаполнена в резервнм буфере, 
+				 * перевести указатель tftp пакета на новую ihex строку */
 				if(tftp_ihex_remainder > 0) {
 					tftp_pck_ptr = &tftp_pck[0] + tftp_ihex_remainder;
 					tftp_ihex_remainder = 0;
 				}
 				if(ihex_str.is_correct) {
 
-					/* Добавить строку к странице, если страница заполнена, приостановить заполнение */
+					/* Добавить строку к странице, если страница заполнена, приостановить запонение */
 					while((pg_ihex_reserve_buf_idx < ihex_str.len) && (pg_idx < SPM_PAGESIZE)) {
 						pg[pg_idx++] = pg_ihex_reserve_buf[pg_ihex_reserve_buf_idx++];
 					}
 
-					/* Страница заполнена или конец файла */
+					/* Если страница заполнена или конец файла */
 					if(ihex_str.is_eof || (pg_idx == SPM_PAGESIZE)) {
 						boot_program_page(); 
 						pg_addr += pg_idx; 
 						pg_idx = 0;
 					} 
 
-					/* Если в предыдущую страницу строка поместилась неполностью, 
-					 * поместить оставшуюся часть строки на новую страницу */
+					/* Если в предыдущую страницу строка поместилась неполностью, поместить оставшуюся часть 
+       				 * строки в новую страницу */
 					while(pg_ihex_reserve_buf_idx < ihex_str.len) {
 						pg[pg_idx++] = pg_ihex_reserve_buf[pg_ihex_reserve_buf_idx++];
 					} 
@@ -575,7 +576,7 @@ void loop() {
 					}
 				}
 				else if(ihex_str.is_last_in_pck && !ihex_str.is_full) {
-					/* Заносим в reserve неполную ihex строку, чтобы дополнить ее из следующего пакета */
+					/* Поместить принятую часть ihex строки в резервный буфер  */
 					uint8_t *ptr = tftp_pck_ptr - 1;
 					for(uint8_t i = 0; i < tftp_pck_unchecked; i++) {
 						tftp_ihex_reserve_buf[i] = *ptr++;
@@ -603,8 +604,7 @@ void loop() {
 }
 
 
-
-int main(void) {
+void main() {
 	setup();
 	loop();
 }
