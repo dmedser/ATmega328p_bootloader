@@ -61,8 +61,8 @@ uint8_t  pg_idx = 0;
 uint32_t pg_addr = 0;
 
 /* –езервный буфер дл€ хранени€ строки длиной до 16-ти байт */
-uint8_t  pg_ihex_reserve_buf[IHEX_MAX_LEN];
-uint8_t  pg_ihex_reserve_buf_idx = 0;
+uint8_t  pg_str_reserve_buf[IHEX_MAX_LEN];
+uint8_t  pg_str_reserve_buf_idx = 0;
 
 
 typedef enum {
@@ -388,7 +388,7 @@ bool ihex_str_is_correct() {
 	
 	for(uint8_t i = 0; i < ihex_str.len; i++) {
 		uint8_t b = get_hex_byte(tftp_pck_ptr);
-		pg_ihex_reserve_buf[i] = b;
+		pg_str_reserve_buf[i] = b;
 		ihex_str.crc += b;
 		tftp_pck_ptr += sizeof(uint16_t);
 	}
@@ -551,8 +551,8 @@ void loop() {
 				if(ihex_str.is_correct) {
 
 					/* ƒобавить строку к странице, если страница заполнена, приостановить запонение */
-					while((pg_ihex_reserve_buf_idx < ihex_str.len) && (pg_idx < SPM_PAGESIZE)) {
-						pg[pg_idx++] = pg_ihex_reserve_buf[pg_ihex_reserve_buf_idx++];
+					while((pg_str_reserve_buf_idx < ihex_str.len) && (pg_idx < SPM_PAGESIZE)) {
+						pg[pg_idx++] = pg_str_reserve_buf[pg_str_reserve_buf_idx++];
 					}
 
 					/* ≈сли страница заполнена или конец файла */
@@ -564,11 +564,11 @@ void loop() {
 
 					/* ≈сли в предыдущую страницу строка поместилась неполностью, поместить оставшуюс€ часть 
        				 * строки в новую страницу */
-					while(pg_ihex_reserve_buf_idx < ihex_str.len) {
-						pg[pg_idx++] = pg_ihex_reserve_buf[pg_ihex_reserve_buf_idx++];
+					while(pg_str_reserve_buf_idx < ihex_str.len) {
+						pg[pg_idx++] = pg_str_reserve_buf[pg_str_reserve_buf_idx++];
 					} 
 
-					pg_ihex_reserve_buf_idx = 0;
+					pg_str_reserve_buf_idx = 0;
 					
 					if(ihex_str.is_last_in_pck) {
 						boot_state = BOOT_STATE_ACK;
