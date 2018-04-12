@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Имя и пароль от WiFi сети: AT+CWJAP_DEF="<SSID>","<passwrd>" */
+/* РРјСЏ Рё РїР°СЂРѕР»СЊ РѕС‚ WiFi СЃРµС‚Рё: AT+CWJAP_DEF="<SSID>","<passwrd>" */
 const char *wifi_connection_str = "AT+CWJAP_DEF=\"Columbia 3.0\",\"allisinvain\"\r\n";
  
 /* Establish UDP Transmission
@@ -42,25 +42,25 @@ const char *udp_pc_connection_str = "AT+CIPSTART=1,\"UDP\",\"192.168.1.40\",69,6
 #define BOOTLOADER_START_ADDRESS            0x7000
 #define APP_START_ADDRESS                   0x0000
 
-#define IHEX_MAX_LEN						16
+#define IHEX_MAX_LEN			    16
 
 void     (*jmp_to_app)(void) = APP_START_ADDRESS;
 
 
-#define F_CPU					(16000000UL)
-#define F_TIMER1				(F_CPU / 1024)
+#define F_CPU				(16000000UL)
+#define F_TIMER1			(F_CPU / 1024)
 #define TICKS_IN_SEC			(F_TIMER1)
 #define BOOT_TIMEOUT_SEC		10
 
-/* Счетчик секунд таймаута выхода из программы бутлоадера */
+/* РЎС‡РµС‚С‡РёРє СЃРµРєСѓРЅРґ С‚Р°Р№РјР°СѓС‚Р° РІС‹С…РѕРґР° РёР· РїСЂРѕРіСЂР°РјРјС‹ Р±СѓС‚Р»РѕР°РґРµСЂР° */
 uint8_t sec_cntr = 0;
 
-/* Буфер страницы для записи в application область flash памяти программ */
+/* Р‘СѓС„РµСЂ СЃС‚СЂР°РЅРёС†С‹ РґР»СЏ Р·Р°РїРёСЃРё РІ application РѕР±Р»Р°СЃС‚СЊ flash РїР°РјСЏС‚Рё РїСЂРѕРіСЂР°РјРј */
 uint8_t  pg[SPM_PAGESIZE];
 uint8_t  pg_idx = 0;
 uint32_t pg_addr = 0;
 
-/* Резервный буфер для хранения строки длиной до 16-ти байт */
+/* Р РµР·РµСЂРІРЅС‹Р№ Р±СѓС„РµСЂ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ СЃС‚СЂРѕРєРё РґР»РёРЅРѕР№ РґРѕ 16-С‚Рё Р±Р°Р№С‚ */
 uint8_t  pg_str_reserve_buf[IHEX_MAX_LEN];
 uint8_t  pg_str_reserve_buf_idx = 0;
 
@@ -73,12 +73,12 @@ typedef enum {
     BOOT_STATE_COMPLETE
 } boot_state_t;
 
-/* Hex файл состоит из ihex строк, см. https://ru.wikipedia.org/wiki/Intel_HEX */ 
+/* Hex С„Р°Р№Р» СЃРѕСЃС‚РѕРёС‚ РёР· ihex СЃС‚СЂРѕРє, СЃРј. https://ru.wikipedia.org/wiki/Intel_HEX */  
 typedef struct {
   bool     is_correct;
   bool     len_is_known;
-  uint8_t  len;           // Длина, указанная в ihex строке 
-  bool     is_full;       // Все байты ihex строки находятся в текущем принятом tftp пакете 
+  uint8_t  len;           // Р”Р»РёРЅР°, СѓРєР°Р·Р°РЅРЅР°СЏ РІ ihex СЃС‚СЂРѕРєРµ 
+  bool     is_full;       // Р’СЃРµ Р±Р°Р№С‚С‹ ihex СЃС‚СЂРѕРєРё РЅР°С…РѕРґСЏС‚СЃСЏ РІ С‚РµРєСѓС‰РµРј РїСЂРёРЅСЏС‚РѕРј tftp РїР°РєРµС‚Рµ 
   bool     is_last_in_pck;
   bool     is_eof;
   uint16_t addr;
@@ -86,7 +86,7 @@ typedef struct {
 } ihex_str_t;
 
 
-/* Сдвиговый буфер для приема символов от ESP8266 */
+/* РЎРґРІРёРіРѕРІС‹Р№ Р±СѓС„РµСЂ РґР»СЏ РїСЂРёРµРјР° СЃРёРјРІРѕР»РѕРІ РѕС‚ ESP8266 */
 class shift_buf {
 public:
     char buf[SHIFT_BUF_LEN];
@@ -117,18 +117,18 @@ ihex_str_t     ihex_str = {/* is_correct */      false,
                            /* crc */             0};
 
 
-/* Количество непроверенных байт в текущем принятом tftp пакете */
+/* РљРѕР»РёС‡РµСЃС‚РІРѕ РЅРµРїСЂРѕРІРµСЂРµРЅРЅС‹С… Р±Р°Р№С‚ РІ С‚РµРєСѓС‰РµРј РїСЂРёРЅСЏС‚РѕРј tftp РїР°РєРµС‚Рµ */
 uint16_t tftp_pck_unchecked = 0;
-/* Количество символов ihex строки, которые отсутсвуют в данном tftp пакете */
+/* РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРёРјРІРѕР»РѕРІ ihex СЃС‚СЂРѕРєРё, РєРѕС‚РѕСЂС‹Рµ РѕС‚СЃСѓС‚СЃРІСѓСЋС‚ РІ РґР°РЅРЅРѕРј tftp РїР°РєРµС‚Рµ */
 uint8_t  tftp_ihex_remainder = 0;
-/* Резервная ihex строка для дозаполнения из текущего принятого tftp пакета, 
-   если последняя ihex строка предыдущего пакета была неполной */
+/* Р РµР·РµСЂРІРЅР°СЏ ihex СЃС‚СЂРѕРєР° РґР»СЏ РґРѕР·Р°РїРѕР»РЅРµРЅРёСЏ РёР· С‚РµРєСѓС‰РµРіРѕ РїСЂРёРЅСЏС‚РѕРіРѕ tftp РїР°РєРµС‚Р°, 
+   РµСЃР»Рё РїРѕСЃР»РµРґРЅСЏСЏ ihex СЃС‚СЂРѕРєР° РїСЂРµРґС‹РґСѓС‰РµРіРѕ РїР°РєРµС‚Р° Р±С‹Р»Р° РЅРµРїРѕР»РЅРѕР№ */
 uint8_t  tftp_ihex_reserve_buf[IHEX_MAX_C_LEN];
 
 
 
 void uart_init() {
-    /* 115200 bps 16 MHz, см. http://wormfood.net/avrbaudcalc.php */
+    /* 115200 bps 16 MHz, СЃРј. http://wormfood.net/avrbaudcalc.php */
     uint16_t baud_rate = 0x0008;
     UBRR0H = (baud_rate & 0x0F00) >> 8;
     UBRR0L = (baud_rate  & 0x00FF);
@@ -246,22 +246,22 @@ void esp_init() {
     /* ESP8266 Instruction Set
       https://www.espressif.com/sites/default/files/documentation/4a-esp8266_at_instruction_set_en.pdf */
     
-    /* Сброс */
+    /* РЎР±СЂРѕСЃ */
     esp_wait_for_str("ready\r\n", "AT+RST\r\n");
             
-    /* Установить режим Station */
+    /* РЈСЃС‚Р°РЅРѕРІРёС‚СЊ СЂРµР¶РёРј Station */
     esp_wait_for_str("OK\r\n", "AT+CWMODE_CUR=1\r\n");
             
-    /* Отключиться от текущей точки доступа WiFi */
+    /* РћС‚РєР»СЋС‡РёС‚СЊСЃСЏ РѕС‚ С‚РµРєСѓС‰РµР№ С‚РѕС‡РєРё РґРѕСЃС‚СѓРїР° WiFi */
     esp_wait_for_str("OK\r\n", "AT+CWQAP\r\n");
             
-    /* Подключиться к точке доступа WiFi */
+    /* РџРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ Рє С‚РѕС‡РєРµ РґРѕСЃС‚СѓРїР° WiFi */
     esp_wait_for_str("OK\r\n", wifi_connection_str);
             
-    /* Получить IP для ESP8266 Station */
+    /* РџРѕР»СѓС‡РёС‚СЊ IP РґР»СЏ ESP8266 Station */
     esp_wait_for_str("OK\r\n", "AT+CWDHCP_DEF=1,1\r\n");
       
-    /* Установить режим множественных подключений */
+    /* РЈСЃС‚Р°РЅРѕРІРёС‚СЊ СЂРµР¶РёРј РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹С… РїРѕРґРєР»СЋС‡РµРЅРёР№ */
     esp_wait_for_str("OK\r\n", "AT+CIPMUX=1\r\n");
             
     /* Deletes/Creates TCP Server
@@ -272,10 +272,10 @@ void esp_init() {
     * <port>: port number; 333 by default */
     esp_wait_for_str("OK\r\n", "AT+CIPSERVER=1,69\r\n");
       
-    /* Установить UDP соединение с ПК */   
+    /* РЈСЃС‚Р°РЅРѕРІРёС‚СЊ UDP СЃРѕРµРґРёРЅРµРЅРёРµ СЃ РџРљ */   
     esp_wait_for_str("OK\r\n", udp_pc_connection_str);
     
-    /* Запросить IP для данного ESP8266  */
+    /* Р—Р°РїСЂРѕСЃРёС‚СЊ IP РґР»СЏ РґР°РЅРЅРѕРіРѕ ESP8266  */
     esp_wait_for_str("OK\r\n", "AT+CIPSTA?\r\n");
 }
 
@@ -334,9 +334,9 @@ uint16_t get_tftp_data_pck_len() {
 
 
 void atmega_pwr_on() {
-    DDRC &= ~(1 << PORTC2);         // PC2 на вход для чтения PWR_GET_DI
-    if(!(PORTC & (1 << PORTC2))) {  // Если 0 на PC2
-        DDRC  |= (1 << PORTC1);     // PC1 на выход для подачи на него 1
+    DDRC &= ~(1 << PORTC2);         // PC2 РЅР° РІС…РѕРґ РґР»СЏ С‡С‚РµРЅРёСЏ PWR_GET_DI
+    if(!(PORTC & (1 << PORTC2))) {  // Р•СЃР»Рё 0 РЅР° PC2
+        DDRC  |= (1 << PORTC1);     // PC1 РЅР° РІС‹С…РѕРґ РґР»СЏ РїРѕРґР°С‡Рё РЅР° РЅРµРіРѕ 1
         PORTC |= (1 << PORTC1);
     }
 }
@@ -411,7 +411,7 @@ void get_ihex_str_status() {
         if(tftp_pck_unchecked > 2) {
             ihex_str.len = get_hex_byte(tftp_pck_ptr);
             ihex_str.len_is_known = true;
-            /* Количество символов в ihex строке */
+            /* РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРёРјРІРѕР»РѕРІ РІ ihex СЃС‚СЂРѕРєРµ */
             uint8_t ihex_str_c_len = ihex_str.len*(sizeof(uint16_t)) + IHEX_SERVICE_CHAR_COUNT;
             int delta = tftp_pck_unchecked - ihex_str_c_len; 
             if(delta < 0) {
@@ -435,8 +435,6 @@ void get_ihex_str_status() {
 }
 
 
-
-
 void erase_app_space() {
     while(pg_addr != BOOTLOADER_START_ADDRESS) {
         eeprom_busy_wait();
@@ -448,9 +446,9 @@ void erase_app_space() {
 }
 
 void boot_program_page() {
-	eeprom_busy_wait();
-	boot_page_erase(pg_addr);
-	boot_spm_busy_wait();      // Wait until the memory is erased.
+    eeprom_busy_wait();
+    boot_page_erase(pg_addr);
+    boot_spm_busy_wait();      // Wait until the memory is erased.
 
     uint8_t *pg_ptr = &pg[0];
     for (uint8_t i = 0; i < pg_idx; i += sizeof(uint16_t)) {
@@ -462,7 +460,7 @@ void boot_program_page() {
         boot_page_fill(pg_addr + i, w);
     }
     boot_page_write(pg_addr);  // Store buffer in flash page.
-    boot_spm_busy_wait();			// Wait until the memory is written.
+    boot_spm_busy_wait();      // Wait until the memory is written.
     
     // Reenable RWW-section again. We need this if we want to jump back
     // to the application after bootloading.
@@ -518,10 +516,10 @@ void loop() {
 				tftp_pck_ptr = &tftp_pck[0];  
 			}
 			else {
-				/* Дозаполнить ihex строку в резервном буфере, 
-				 * если в предыдущем пакете она была принята не полностью */
+				/* Р”РѕР·Р°РїРѕР»РЅРёС‚СЊ ihex СЃС‚СЂРѕРєСѓ РІ СЂРµР·РµСЂРІРЅРѕРј Р±СѓС„РµСЂРµ, 
+				   РµСЃР»Рё РІ РїСЂРµРґС‹РґСѓС‰РµРј РїР°РєРµС‚Рµ РѕРЅР° Р±С‹Р»Р° РїСЂРёРЅСЏС‚Р° РЅРµ РїРѕР»РЅРѕСЃС‚СЊСЋ */
 				uint8_t i = tftp_pck_unchecked;
-				/* Количество символов в ihex строке */
+				/* РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРёРјРІРѕР»РѕРІ РІ ihex СЃС‚СЂРѕРєРµ */
 				uint8_t ihex_str_c_len = 0;
 				if(ihex_str.len_is_known) {
 					ihex_str_c_len = ihex_str.len*(sizeof(uint16_t)) + IHEX_SERVICE_CHAR_COUNT;                    
@@ -542,28 +540,28 @@ void loop() {
         
 			while(1) {
 				get_ihex_str_status();
-				/* Если ihex строка была дозаполнена в резервнм буфере, 
-				 * перевести указатель tftp пакета на новую ihex строку */
+				/* Р•СЃР»Рё ihex СЃС‚СЂРѕРєР° Р±С‹Р»Р° РґРѕР·Р°РїРѕР»РЅРµРЅР° РІ СЂРµР·РµСЂРІРЅРј Р±СѓС„РµСЂРµ, 
+				   РїРµСЂРµРІРµСЃС‚Рё СѓРєР°Р·Р°С‚РµР»СЊ tftp РїР°РєРµС‚Р° РЅР° РЅРѕРІСѓСЋ ihex СЃС‚СЂРѕРєСѓ */
 				if(tftp_ihex_remainder > 0) {
 					tftp_pck_ptr = &tftp_pck[0] + tftp_ihex_remainder;
 					tftp_ihex_remainder = 0;
 				}
 				if(ihex_str.is_correct) {
 
-					/* Добавить строку к странице, если страница заполнена, приостановить запонение */
+					/* Р”РѕР±Р°РІРёС‚СЊ СЃС‚СЂРѕРєСѓ Рє СЃС‚СЂР°РЅРёС†Рµ, РµСЃР»Рё СЃС‚СЂР°РЅРёС†Р° Р·Р°РїРѕР»РЅРµРЅР°, РїСЂРёРѕСЃС‚Р°РЅРѕРІРёС‚СЊ Р·Р°РїРѕРЅРµРЅРёРµ */
 					while((pg_str_reserve_buf_idx < ihex_str.len) && (pg_idx < SPM_PAGESIZE)) {
 						pg[pg_idx++] = pg_str_reserve_buf[pg_str_reserve_buf_idx++];
 					}
 
-					/* Если страница заполнена или конец файла */
+					/* Р•СЃР»Рё СЃС‚СЂР°РЅРёС†Р° Р·Р°РїРѕР»РЅРµРЅР° РёР»Рё РєРѕРЅРµС† С„Р°Р№Р»Р° */
 					if(ihex_str.is_eof || (pg_idx == SPM_PAGESIZE)) {
 						boot_program_page(); 
 						pg_addr += pg_idx; 
 						pg_idx = 0;
 					} 
 
-					/* Если в предыдущую страницу строка поместилась неполностью, поместить оставшуюся часть 
-       				 * строки в новую страницу */
+					/* Р•СЃР»Рё РІ РїСЂРµРґС‹РґСѓС‰СѓСЋ СЃС‚СЂР°РЅРёС†Сѓ СЃС‚СЂРѕРєР° РїРѕРјРµСЃС‚РёР»Р°СЃСЊ РЅРµРїРѕР»РЅРѕСЃС‚СЊСЋ, РїРѕРјРµСЃС‚РёС‚СЊ РѕСЃС‚Р°РІС€СѓСЋСЃСЏ С‡Р°СЃС‚СЊ 
+       					   СЃС‚СЂРѕРєРё РІ РЅРѕРІСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ */
 					while(pg_str_reserve_buf_idx < ihex_str.len) {
 						pg[pg_idx++] = pg_str_reserve_buf[pg_str_reserve_buf_idx++];
 					} 
@@ -576,7 +574,7 @@ void loop() {
 					}
 				}
 				else if(ihex_str.is_last_in_pck && !ihex_str.is_full) {
-					/* Поместить принятую часть ihex строки в резервный буфер  */
+					/* РџРѕРјРµСЃС‚РёС‚СЊ РїСЂРёРЅСЏС‚СѓСЋ С‡Р°СЃС‚СЊ ihex СЃС‚СЂРѕРєРё РІ СЂРµР·РµСЂРІРЅС‹Р№ Р±СѓС„РµСЂ  */
 					uint8_t *ptr = tftp_pck_ptr - 1;
 					for(uint8_t i = 0; i < tftp_pck_unchecked; i++) {
 						tftp_ihex_reserve_buf[i] = *ptr++;
