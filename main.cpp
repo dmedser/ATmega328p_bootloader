@@ -7,7 +7,7 @@
 #include <string.h>
 
 /* Имя и пароль от WiFi сети: AT+CWJAP_DEF="<SSID>","<passwrd>" */
-const char *wifi_connection_str = "AT+CWJAP_DEF=\"Columbia 3.0\",\"allisinvain\"\r\n";
+const char *wifi_connection_str = "AT+CWJAP_DEF=\"<SSID>\",\"<password>\"\r\n";
  
 /* Establish UDP Transmission
  * Multiple connections (AT+CIPMUX=1):
